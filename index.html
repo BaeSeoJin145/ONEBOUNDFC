@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ONEBOUND FC - 공식 축구 구단 웹사이트. 선수 정보, 유니폼, 일정 등을 확인하세요.">
+    <title>ONEBOUND FC | 공식 웹사이트</title>
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ===== HEADER / NAVIGATION ===== -->
+    <header id="main-header">
+        <div class="header-inner">
+            <a href="#" class="logo-link" id="logo-link">
+                <img src="assets/logo.png" alt="ONEBOUND FC Logo" class="logo-img">
+                <div class="logo-text">
+                    <span class="logo-one">ONE</span><span class="logo-bound">BOUND</span>
+                    <span class="logo-fc">FC</span>
+                </div>
+            </a>
+            <nav id="main-nav">
+                <ul class="nav-list">
+                    <li><a href="#home" class="nav-link active" data-section="home">홈</a></li>
+                    <li><a href="#locker-room" class="nav-link" data-section="locker-room">스쿼드</a></li>
+                    <li><a href="#gallery" class="nav-link" data-section="gallery">갤러리</a></li>
+                    <li><a href="#schedule" class="nav-link" data-section="schedule">일정</a></li>
+                    <li><a href="#about" class="nav-link" data-section="about">구단 소개</a></li>
+                    <li><a href="#contact" class="nav-link" data-section="contact">문의</a></li>
+                </ul>
+            </nav>
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="메뉴 열기">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== HERO SECTION ===== -->
+    <section id="home" class="hero-section">
+        <div class="hero-particles" id="hero-particles"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <img src="assets/logo.png" alt="ONEBOUND FC Badge" class="hero-badge-img">
+            </div>
+            <h1 class="hero-title">
+                <span class="hero-one">ONE</span><span class="hero-bound">BOUND</span>
+                <span class="hero-fc">FC</span>
+            </h1>
+            <p class="hero-tagline">Since 2023</p>
+            <a href="#locker-room" class="hero-cta" id="hero-cta">스쿼드 보기</a>
+        </div>
+        <div class="hero-scroll-indicator">
+            <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+            <span>SCROLL</span>
+        </div>
+    </section>
+
+    <!-- ===== LOCKER ROOM (3D CLOSET) ===== -->
+    <section id="locker-room" class="locker-room-section">
+        <!-- Locker room ambient -->
+        <div class="locker-bg">
+            <div class="locker-shelf-top"></div>
+            <div class="locker-wood-panels"></div>
+            <div class="locker-shelf-bottom"></div>
+            <div class="locker-ambient-light"></div>
+        </div>
+
+        <!-- Position filter tabs at top -->
+        <div class="locker-header">
+            <div class="locker-title-area">
+                <img src="assets/logo.png" alt="" class="locker-logo">
+                <h2 class="locker-title"><span class="lt-one">ONE</span><span class="lt-bound">BOUND</span> <span class="lt-fc">FC</span></h2>
+            </div>
+            <div class="position-tabs" id="position-tabs">
+                <button class="pos-tab active" data-pos="all">ALL <span class="pos-count">15</span></button>
+                <button class="pos-tab" data-pos="DF">DEF <span class="pos-count">5</span></button>
+                <button class="pos-tab" data-pos="MF">MID <span class="pos-count">4</span></button>
+                <button class="pos-tab" data-pos="FW">FWD <span class="pos-count">6</span></button>
+            </div>
+        </div>
+
+        <!-- The rail -->
+        <div class="rail-container">
+            <div class="metal-rail"></div>
+        </div>
+
+        <!-- 3D Carousel -->
+        <div class="carousel-viewport" id="carousel-viewport">
+            <div class="carousel-track" id="carousel-track">
+                <!-- Jersey items rendered by JS -->
+            </div>
+        </div>
+
+        <!-- Player name indicator below -->
+        <div class="player-indicator" id="player-indicator">
+            <span class="indicator-number" id="indicator-number"></span>
+            <span class="indicator-name" id="indicator-name"></span>
+            <span class="indicator-pos" id="indicator-pos"></span>
+        </div>
+
+        <!-- Instruction -->
+        <div class="locker-instruction">
+            <span>좌우로 드래그하여 유니폼을 탐색하세요 · 클릭하면 선수 정보를 확인할 수 있습니다</span>
+        </div>
+    </section>
+
+    <!-- ===== PLAYER DETAIL PANEL (Slides in) ===== -->
+    <div class="player-panel-overlay" id="player-panel-overlay">
+        <div class="player-panel" id="player-panel">
+            <button class="panel-close" id="panel-close">&times;</button>
+
+            <!-- Large jersey display -->
+            <div class="panel-jersey-area">
+                <div class="panel-jersey-wrapper" id="panel-jersey-wrapper">
+                    <div class="panel-jersey-front">
+                        <img src="assets/UniformFront.png" alt="유니폼 앞면" class="panel-jersey-img">
+                    </div>
+                    <div class="panel-jersey-back">
+                        <img src="assets/UniformBack.png" alt="유니폼 뒷면" class="panel-jersey-img">
+                        <div class="panel-back-cover" id="panel-back-cover">
+                            <span class="panel-back-name" id="panel-back-name"></span>
+                            <span class="panel-back-number" id="panel-back-number"></span>
+                        </div>
+                    </div>
+                </div>
+                <p class="panel-drag-hint">드래그하여 유니폼을 돌려보세요</p>
+            </div>
+
+            <!-- Info card -->
+            <div class="panel-info-card" id="panel-info-card">
+                <div class="info-card-header">
+                    <div class="info-flag">🇰🇷</div>
+                    <div class="info-pos-label" id="info-pos-label">DEFENDER</div>
+                </div>
+                <div class="info-card-main">
+                    <div class="info-number-big" id="info-number-big"></div>
+                    <div class="info-name-area">
+                        <div class="info-name-kr" id="info-name-kr"></div>
+                        <div class="info-name-en" id="info-name-en"></div>
+                    </div>
+                </div>
+                <div class="info-card-details">
+                    <div class="info-row"><span class="info-label">CLUB</span><span class="info-value">ONEBOUND FC</span></div>
+                    <div class="info-row"><span class="info-label">POSITION</span><span class="info-value" id="info-pos-full"></span></div>
+                    <div class="info-row"><span class="info-label">NUMBER</span><span class="info-value" id="info-num-detail"></span></div>
+                    <div class="info-row"><span class="info-label">SPECIALTY</span><span class="info-value" id="info-specialty"></span></div>
+                    <div class="info-row"><span class="info-label">MOTTO</span><span class="info-value info-quote" id="info-quote"></span></div>
+                </div>
+                <div class="info-stats" id="info-stats">
+                    <!-- Stats injected by JS -->
+                </div>
+                <button class="panel-back-btn" id="panel-back-btn">← BACK TO SQUAD</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GALLERY ===== -->
+    <section id="gallery" class="gallery-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-line"></span>
+                GALLERY
+                <span class="title-line"></span>
+            </h2>
+            <p class="section-desc">경기 & 훈련 사진</p>
+        </div>
+
+        <div class="gallery-filter" id="gallery-filter">
+            <button class="gal-tab active" data-cat="all">전체</button>
+            <button class="gal-tab" data-cat="match">경기</button>
+            <button class="gal-tab" data-cat="training">훈련</button>
+            <button class="gal-tab" data-cat="team">팀</button>
+        </div>
+
+        <div class="gallery-grid" id="gallery-grid">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- Lightbox -->
+        <div class="lightbox" id="lightbox">
+            <button class="lightbox-close" id="lightbox-close">&times;</button>
+            <button class="lightbox-prev" id="lightbox-prev">&#10094;</button>
+            <div class="lightbox-content">
+                <img src="" alt="" class="lightbox-img" id="lightbox-img">
+                <div class="lightbox-caption" id="lightbox-caption"></div>
+            </div>
+            <button class="lightbox-next" id="lightbox-next">&#10095;</button>
+        </div>
+    </section>
+
+    <!-- ===== UNIFORM SHOWCASE ===== -->
+    <section id="uniform-showcase" class="uniform-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-line"></span>
+                UNIFORM
+                <span class="title-line"></span>
+            </h2>
+            <p class="section-desc">2023/24 시즌 공식 유니폼</p>
+        </div>
+        <div class="uniform-display">
+            <div class="uniform-card" id="uniform-front-card">
+                <div class="uniform-img-wrapper">
+                    <img src="assets/UniformFront.png" alt="유니폼 앞면" class="uniform-img">
+                </div>
+                <p class="uniform-label">HOME KIT — FRONT</p>
+            </div>
+            <div class="uniform-card" id="uniform-back-card">
+                <div class="uniform-img-wrapper">
+                    <img src="assets/UniformBack.png" alt="유니폼 뒷면" class="uniform-img">
+                </div>
+                <p class="uniform-label">HOME KIT — BACK</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SCHEDULE ===== -->
+    <section id="schedule" class="schedule-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="title-line"></span>
+                SCHEDULE
+                <span class="title-line"></span>
+            </h2>
+            <p class="section-desc">다가오는 경기 일정</p>
+        </div>
+        <div class="schedule-grid" id="schedule-grid"></div>
+    </section>
+
+    <!-- ===== ABOUT ===== -->
+    <section id="about" class="about-section">
+        <div class="about-inner">
+            <div class="about-badge">
+                <img src="assets/logo.png" alt="OBFC" class="about-badge-img">
+            </div>
+            <div class="about-text">
+                <h2 class="about-title">구단 소개</h2>
+                <p class="about-desc"><strong>ONEBOUND FC</strong>는 2023년 창단된 축구 구단입니다. "하나로 묶인(ONEBOUND)" 이라는 이름처럼, 모든 선수와 팬이 하나 되어 끝없는 도전과 열정으로 경기장을 누빕니다.</p>
+                <p class="about-desc">퍼플과 골드의 구단 컬러는 고귀한 정신과 승리의 영광을 상징합니다. ONEBOUND FC는 단순한 축구 클럽이 아닌, 하나의 가족입니다.</p>
+                <div class="about-stats">
+                    <div class="stat-item"><span class="stat-number" data-count="2023">0</span><span class="stat-label">창단년도</span></div>
+                    <div class="stat-item"><span class="stat-number" data-count="15">0</span><span class="stat-label">선수</span></div>
+                    <div class="stat-item"><span class="stat-number" data-count="1">0</span><span class="stat-label">열정</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== CONTACT ===== -->
+    <section id="contact" class="contact-section">
+        <div class="section-header">
+            <h2 class="section-title"><span class="title-line"></span>CONTACT<span class="title-line"></span></h2>
+            <p class="section-desc">구단에 문의하기</p>
+        </div>
+        <form class="contact-form" id="contact-form">
+            <div class="form-row">
+                <div class="form-group"><label for="contact-name">이름</label><input type="text" id="contact-name" placeholder="이름을 입력하세요" required></div>
+                <div class="form-group"><label for="contact-email">이메일</label><input type="email" id="contact-email" placeholder="이메일을 입력하세요" required></div>
+            </div>
+            <div class="form-group"><label for="contact-message">메시지</label><textarea id="contact-message" rows="5" placeholder="메시지를 입력하세요" required></textarea></div>
+            <button type="submit" class="form-submit" id="form-submit">보내기</button>
+        </form>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer id="main-footer">
+        <div class="footer-inner">
+            <div class="footer-logo">
+                <img src="assets/logo.png" alt="OBFC" class="footer-logo-img">
+                <span class="footer-club-name"><span class="logo-one">ONE</span><span class="logo-bound">BOUND</span> FC</span>
+            </div>
+            <p class="footer-copy">&copy; 2023 ONEBOUND FC. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
