@@ -76,9 +76,16 @@
             <div class="position-tabs" id="position-tabs">
                 <button class="pos-tab active" data-pos="all">ALL <span class="pos-count">15</span></button>
                 <button class="pos-tab" data-pos="DF">DEF <span class="pos-count">5</span></button>
-                <button class="pos-tab" data-pos="MF">MID <span class="pos-count">4</span></button>
-                <button class="pos-tab" data-pos="FW">FWD <span class="pos-count">6</span></button>
+                <button class="pos-tab" data-pos="MF">MID <span class="pos-count">5</span></button>
+                <button class="pos-tab" data-pos="FW">FWD <span class="pos-count">5</span></button>
             </div>
+        </div>
+
+        <!-- Category labels above rail -->
+        <div class="rail-categories" id="rail-categories">
+            <span class="rail-cat-tag">DEFENDERS (5)</span>
+            <span class="rail-cat-tag">MIDFIELDERS (5)</span>
+            <span class="rail-cat-tag">FORWARDS (5)</span>
         </div>
 
         <!-- The rail -->
@@ -86,7 +93,11 @@
             <div class="metal-rail"></div>
         </div>
 
-        <!-- 3D Carousel -->
+        <!-- Rail Navigation Buttons -->
+        <button class="rail-nav-btn rail-nav-prev" id="rail-nav-prev" aria-label="이전 유니폼">&#10094;</button>
+        <button class="rail-nav-btn rail-nav-next" id="rail-nav-next" aria-label="다음 유니폼">&#10095;</button>
+
+        <!-- 3D Carousel / Closet Viewport -->
         <div class="carousel-viewport" id="carousel-viewport">
             <div class="carousel-track" id="carousel-track">
                 <!-- Jersey items rendered by JS -->
@@ -95,59 +106,61 @@
 
         <!-- Player name indicator below -->
         <div class="player-indicator" id="player-indicator">
-            <span class="indicator-number" id="indicator-number"></span>
-            <span class="indicator-name" id="indicator-name"></span>
-            <span class="indicator-pos" id="indicator-pos"></span>
+            <div class="indicator-badge" id="indicator-number">#66</div>
+            <div class="indicator-info">
+                <span class="indicator-name" id="indicator-name">서진 (SEOJIN)</span>
+                <span class="indicator-pos" id="indicator-pos">미드필더 · ONEBOUND FC</span>
+            </div>
         </div>
 
         <!-- Instruction -->
         <div class="locker-instruction">
-            <span>좌우로 드래그하여 유니폼을 탐색하세요 · 클릭하면 선수 정보를 확인할 수 있습니다</span>
+            <span>유니폼에 마우스를 올리거나 드래그하여 옷장을 탐색하세요 · 클릭하면 3D 스쿼드 시트가 열립니다</span>
         </div>
     </section>
 
-    <!-- ===== PLAYER DETAIL PANEL (Slides in) ===== -->
+    <!-- ===== PLAYER DETAIL PANEL (SQUAD SHEET) ===== -->
     <div class="player-panel-overlay" id="player-panel-overlay">
         <div class="player-panel" id="player-panel">
-            <button class="panel-close" id="panel-close">&times;</button>
+            <button class="panel-close" id="panel-close" aria-label="닫기">&times;</button>
 
-            <!-- Large jersey display -->
+            <!-- Large 3D jersey display -->
             <div class="panel-jersey-area">
                 <div class="panel-jersey-wrapper" id="panel-jersey-wrapper">
                     <div class="panel-jersey-front">
                         <img src="assets/UniformFront.png" alt="유니폼 앞면" class="panel-jersey-img">
                     </div>
                     <div class="panel-jersey-back">
-                        <img src="assets/UniformBack.png" alt="유니폼 뒷면" class="panel-jersey-img">
-                        <div class="panel-back-cover" id="panel-back-cover">
-                            <span class="panel-back-name" id="panel-back-name"></span>
-                            <span class="panel-back-number" id="panel-back-number"></span>
-                        </div>
+                        <img src="" alt="유니폼 뒷면" class="panel-jersey-img" id="panel-jersey-back-img">
                     </div>
                 </div>
-                <p class="panel-drag-hint">드래그하여 유니폼을 돌려보세요</p>
+                <div class="panel-jersey-controls">
+                    <button class="panel-flip-btn" id="panel-flip-btn">🔄 유니폼 앞 / 뒤 뒤집기</button>
+                    <p class="panel-drag-hint">유니폼을 좌우로 드래그하여 3D로 회전해보세요</p>
+                </div>
             </div>
 
-            <!-- Info card -->
+            <!-- Squad Sheet info card -->
             <div class="panel-info-card" id="panel-info-card">
                 <div class="info-card-header">
-                    <div class="info-flag">🇰🇷</div>
-                    <div class="info-pos-label" id="info-pos-label">DEFENDER</div>
+                    <div class="info-sheet-tag">SQUAD SHEET</div>
+                    <div class="info-pos-badge" id="info-pos-label">DEFENDER</div>
                 </div>
                 <div class="info-card-main">
-                    <div class="info-number-big" id="info-number-big"></div>
+                    <div class="info-number-big" id="info-number-big">#66</div>
                     <div class="info-name-area">
-                        <div class="info-name-kr" id="info-name-kr"></div>
-                        <div class="info-name-en" id="info-name-en"></div>
+                        <div class="info-name-kr" id="info-name-kr">서진</div>
+                        <div class="info-name-en" id="info-name-en">SEOJIN BAE</div>
                     </div>
                 </div>
                 <div class="info-card-details">
-                    <div class="info-row"><span class="info-label">CLUB</span><span class="info-value">ONEBOUND FC</span></div>
-                    <div class="info-row"><span class="info-label">POSITION</span><span class="info-value" id="info-pos-full"></span></div>
-                    <div class="info-row"><span class="info-label">NUMBER</span><span class="info-value" id="info-num-detail"></span></div>
-                    <div class="info-row"><span class="info-label">SPECIALTY</span><span class="info-value" id="info-specialty"></span></div>
-                    <div class="info-row"><span class="info-label">MOTTO</span><span class="info-value info-quote" id="info-quote"></span></div>
+                    <div class="info-row"><span class="info-label">CLUB</span><span class="info-dots"></span><span class="info-value">ONEBOUND FC</span></div>
+                    <div class="info-row"><span class="info-label">POSITION</span><span class="info-dots"></span><span class="info-value" id="info-pos-full">미드필더 (Playmaker)</span></div>
+                    <div class="info-row"><span class="info-label">NUMBER</span><span class="info-dots"></span><span class="info-value" id="info-num-detail">66</span></div>
+                    <div class="info-row"><span class="info-label">SPECIALTY</span><span class="info-dots"></span><span class="info-value" id="info-specialty">게임 메이킹 & 비전</span></div>
+                    <div class="info-row"><span class="info-label">MOTTO</span><span class="info-dots"></span><span class="info-value info-quote" id="info-quote">"경기를 읽는 눈이 무기다"</span></div>
                 </div>
+                <div class="info-stats-title">PLAYER ATTRIBUTES</div>
                 <div class="info-stats" id="info-stats">
                     <!-- Stats injected by JS -->
                 </div>
