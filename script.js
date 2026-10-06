@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== 1. LOCKER ROOM (3D CLOSET) =====
-// ===== 1. REALISTIC CALM FABRIC PHYSICS ENGINE =====
+// ===== 1. REALISTIC NATURAL FABRIC PHYSICS ENGINE =====
 const ClothEngine = {
     items: [],
     imagesCache: {},
@@ -192,7 +192,7 @@ const ClothEngine = {
         }
     },
 
-    addItem(canvas, imgUrl, hangerEl, hookEl) {
+    addItem(canvas, imgUrl) {
         let img = this.imagesCache[imgUrl];
         if (!img) {
             img = new Image();
@@ -205,27 +205,20 @@ const ClothEngine = {
             canvas,
             ctx,
             img,
-            hangerEl,
-            hookEl,
-            // Calm, weighted fabric physics
-            amp: 0,              // At rest: completely stable
-            targetAmp: 0,        // Decays to 0
-            phase: 0,
-            phaseSpeed: 2.2,     // Natural heavy pendulum speed
-            tilt: 0,             // Hanger angle in degrees
-            tiltVel: 0,          // Angular velocity
-            direction: 1,        // Wave direction (+1 or -1)
+            // Natural 2nd-order spring-damper physical state
+            disp: 0,             // Hem displacement in px (0 at rest)
+            vel: 0,              // Velocity in px/s
             slices: 55,          // Clean smooth slices
             wBase: 210,          // Base width
             hBase: 236,          // Base height
-            canvasW: 280,
+            canvasW: 280,        // Extra width for natural sway
             canvasH: 260,
             srcX: 160,
             srcY: 130,
             srcW: 680,
             srcH: 765,
             isLoaded: img.complete && img.naturalWidth > 0,
-            needsDraw: true      // True on init and when moving
+            needsDraw: true
         };
 
         if (!instance.isLoaded) {
@@ -250,81 +243,56 @@ const ClothEngine = {
         this.items = [];
     },
 
-    // Gentle realistic impulse (slightly more fluid sway)
-    triggerImpulse(instance, amp = 9.5, dir = 1) {
+    // ONLY the touched jersey moves - natural physical impulse
+    triggerImpulse(instance, velocityImpulse = 60.0) {
         if (!instance) return;
-        instance.direction = dir;
-        instance.targetAmp = Math.max(instance.targetAmp, amp);
-        instance.tiltVel += dir * (amp * 0.12);
+        instance.vel += velocityImpulse;
         instance.needsDraw = true;
     },
 
-    // Natural wave on arrow click
-    triggerWaveAll(direction = 1, intensity = 13) {
-        this.items.forEach((item, idx) => {
-            setTimeout(() => {
-                this.triggerImpulse(item, intensity, direction);
-            }, idx * 45);
+    // Gentle scroll impulse (when closet rail is dragged or scrolled)
+    triggerScroll(delta) {
+        const dir = delta > 0 ? -1 : 1;
+        const impulse = Math.min(Math.abs(delta) * 1.5, 55.0) * dir;
+        if (Math.abs(impulse) < 2.0) return;
+        this.items.forEach((item) => {
+            item.vel += impulse;
+            item.needsDraw = true;
         });
     },
 
-    // Moderate scroll physics
-    triggerScroll(delta) {
-        const dir = delta > 0 ? -1 : 1;
-        const speed = Math.min(Math.abs(delta) * 0.38, 16);
-        if (speed < 0.4) return;
-        this.items.forEach((item) => {
-            item.direction = dir;
-            item.targetAmp = Math.max(item.targetAmp, speed);
-            item.tiltVel += dir * (speed * 0.06);
-            item.needsDraw = true;
+    // Arrow navigation impulse
+    triggerWaveAll(direction = 1, impulse = 45.0) {
+        this.items.forEach((item, idx) => {
+            setTimeout(() => {
+                this.triggerImpulse(item, direction * impulse);
+            }, idx * 40);
         });
     },
 
     loop() {
         const dt = 0.016;
-        const springK = 0.055;
-        const springDamp = 0.915; // Allows ~2-3 graceful, natural oscillations
+        const k = 28.0;      // Restoring stiffness (gravity pulling down)
+        const c = 5.2;       // Heavy fabric air & internal friction damping
 
         for (let i = 0; i < this.items.length; i++) {
             const item = this.items[i];
             if (!item.canvas.parentElement) continue;
 
-            // Amplitude decay towards 0 (rest)
-            item.amp += (item.targetAmp - item.amp) * 0.09;
-            item.targetAmp *= 0.95; // Smooth decay allowing a bit more fluid sway
-
-            if (item.amp < 0.04) {
-                item.amp = 0;
-            }
-
-            // Hanger pendulum spring physics
-            const accel = -springK * item.tilt;
-            item.tiltVel = (item.tiltVel + accel) * springDamp;
-            item.tilt += item.tiltVel;
-
-            if (Math.abs(item.tilt) < 0.03 && Math.abs(item.tiltVel) < 0.03) {
-                item.tilt = 0;
-                item.tiltVel = 0;
-            }
-
-            // Advance phase only when there is motion
-            if (item.amp > 0) {
-                item.phase += item.phaseSpeed * dt;
+            // Physics step when moving
+            if (Math.abs(item.disp) > 0.02 || Math.abs(item.vel) > 0.02) {
+                const f = -k * item.disp - c * item.vel;
+                item.vel += f * dt;
+                item.disp += item.vel * dt;
                 item.needsDraw = true;
-            } else if (Math.abs(item.tilt) > 0.04) {
-                item.needsDraw = true;
+
+                // Rest condition
+                if (Math.abs(item.disp) < 0.04 && Math.abs(item.vel) < 0.04) {
+                    item.disp = 0;
+                    item.vel = 0;
+                }
             }
 
-            // Sync physical hanger & hook in DOM
-            if (item.hangerEl) {
-                item.hangerEl.style.transform = `rotate(${item.tilt.toFixed(2)}deg)`;
-            }
-            if (item.hookEl) {
-                item.hookEl.style.transform = `translateX(${(item.tilt * 0.32).toFixed(1)}px)`;
-            }
-
-            // If not loaded, or at rest and already drawn, skip redraw to conserve resources
             if (!item.isLoaded || !item.needsDraw) continue;
 
             // Viewport culling
@@ -346,19 +314,18 @@ const ClothEngine = {
 
             ctx.clearRect(0, 0, w, h);
 
-            // Draw calm, realistic fabric drape slices with natural fluid sway
+            // Draw natural cloth drape
             for (let s = 0; s < slices; s++) {
                 const yNorm = (s + 0.5) / slices; // 0 (collar) to 1 (hem)
-                const pinnedWeight = Math.pow(yNorm, 1.65); // Natural cloth curvature
 
-                // S-curve drape wave with slight secondary inertia lag for authentic cloth feel
-                const wave = (Math.sin(item.phase - yNorm * 1.8) + 0.18 * Math.sin(item.phase * 1.6 - yNorm * 3.2)) 
-                             * item.amp * pinnedWeight * item.direction;
+                // Top collar/shoulders strictly pinned at 0 under the solid stationary hanger bar!
+                // Body & hem sway with realistic gravity curve:
+                const pinnedWeight = Math.pow(yNorm, 1.85);
 
-                // Natural hanger pendulum displacement
-                const hangerOffset = Math.tan(item.tilt * Math.PI / 180) * (yNorm * hBase * 0.48);
+                // Natural fabric inertia curve (middle lags slightly behind hem during motion)
+                const lag = item.vel * 0.02 * Math.sin(yNorm * Math.PI);
 
-                const totalDx = (cx - wBase / 2) + wave + hangerOffset;
+                const totalDx = (cx - wBase / 2) + (item.disp * pinnedWeight) - lag;
                 const dy = topY + s * sliceH;
                 const srcSy = item.srcY + s * srcSliceH;
 
@@ -369,8 +336,8 @@ const ClothEngine = {
                 );
             }
 
-            // When completely settled, stop drawing until next user interaction
-            if (item.amp === 0 && item.tilt === 0) {
+            // Once completely at rest, stop drawing to keep display rock-steady and 0% CPU
+            if (item.disp === 0 && item.vel === 0) {
                 item.needsDraw = false;
             }
         }
@@ -397,7 +364,7 @@ function initLockerRoom() {
             if (filtered.length > 0) {
                 updateIndicator(filtered[0]);
             }
-            ClothEngine.triggerWaveAll(1, 9);
+            ClothEngine.triggerWaveAll(1, 35.0);
         });
     });
 
@@ -405,13 +372,13 @@ function initLockerRoom() {
     if (railPrev) {
         railPrev.addEventListener('click', () => {
             carouselViewport.scrollBy({ left: -320, behavior: 'smooth' });
-            ClothEngine.triggerWaveAll(1, 13);
+            ClothEngine.triggerWaveAll(1, 45.0);
         });
     }
     if (railNext) {
         railNext.addEventListener('click', () => {
             carouselViewport.scrollBy({ left: 320, behavior: 'smooth' });
-            ClothEngine.triggerWaveAll(-1, 13);
+            ClothEngine.triggerWaveAll(-1, 45.0);
         });
     }
 
@@ -475,29 +442,25 @@ function renderJerseyTrack(players) {
         `;
 
         const canvas = item.querySelector('.jersey-cloth-canvas');
-        const hanger = item.querySelector('.jersey-hanger');
-        const hook = item.querySelector('.jersey-hook');
         const clothInst = ClothEngine.addItem(
             canvas,
-            `assets/jerseys/jersey_${player.number}.png`,
-            hanger,
-            hook
+            `assets/jerseys/jersey_${player.number}.png`
         );
         item._clothInst = clothInst;
 
-        // Natural fluid hover sway
-        item.addEventListener('mouseenter', () => {
+        // ONLY the hovered jersey sways naturally! Zero neighbor trembling!
+        item.addEventListener('mouseenter', (e) => {
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
 
-            ClothEngine.triggerImpulse(clothInst, 9.5, 1);
+            // Natural impulse direction based on cursor movement/side
+            const rect = item.getBoundingClientRect();
+            const fromLeft = e.clientX < (rect.left + rect.width / 2);
+            const impulseDir = fromLeft ? 1 : -1;
 
-            // Subtle gentle reaction on neighboring jerseys
-            const prev = item.previousElementSibling;
-            const next = item.nextElementSibling;
-            if (prev && prev._clothInst) ClothEngine.triggerImpulse(prev._clothInst, 4.5, 1);
-            if (next && next._clothInst) ClothEngine.triggerImpulse(next._clothInst, 4.5, -1);
+            // Smooth natural fabric touch impulse
+            ClothEngine.triggerImpulse(clothInst, impulseDir * 58.0);
         });
 
         // Click opens Squad Sheet
@@ -506,7 +469,7 @@ function renderJerseyTrack(players) {
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
-            ClothEngine.triggerImpulse(clothInst, 11, 1);
+            ClothEngine.triggerImpulse(clothInst, 65.0);
             openPlayerPanel(player);
         });
 
