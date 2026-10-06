@@ -51,14 +51,11 @@
             <p class="hero-tagline">Since 2023</p>
             <a href="#locker-room" class="hero-cta" id="hero-cta">스쿼드 보기</a>
         </div>
-        <div class="hero-scroll-indicator">
-            <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
-            <span>SCROLL</span>
-        </div>
     </section>
 
     <!-- ===== LOCKER ROOM (3D CLOSET) ===== -->
     <section id="locker-room" class="locker-room-section">
+    
         <!-- Locker room ambient -->
         <div class="locker-bg">
             <div class="locker-shelf-top"></div>
@@ -115,12 +112,11 @@
 
         <!-- Instruction -->
         <div class="locker-instruction">
-            <span>유니폼에 마우스를 올리거나 드래그하여 옷장을 탐색하세요 · 클릭하면 3D 스쿼드 시트가 열립니다</span>
+            <span>유니폼에 마우스를 올리거나 드래그하여 옷장을 탐색하세요 · 클릭하면 스쿼드 시트가 열립니다</span>
         </div>
-    </section>
 
-    <!-- ===== PLAYER DETAIL PANEL (SQUAD SHEET) ===== -->
-    <div class="player-panel-overlay" id="player-panel-overlay">
+        <!-- ===== PLAYER DETAIL PANEL (SQUAD SHEET) — inline overlay ===== -->
+        <div class="player-panel-overlay" id="player-panel-overlay">
         <div class="player-panel" id="player-panel">
             <button class="panel-close" id="panel-close" aria-label="닫기">&times;</button>
 
@@ -135,7 +131,7 @@
                     </div>
                 </div>
                 <div class="panel-jersey-controls">
-                    <button class="panel-flip-btn" id="panel-flip-btn">🔄 유니폼 앞 / 뒤 뒤집기</button>
+                    <button class="panel-flip-btn" id="panel-flip-btn">유니폼 앞 / 뒤 뒤집기</button>
                     <p class="panel-drag-hint">유니폼을 좌우로 드래그하여 3D로 회전해보세요</p>
                 </div>
             </div>
@@ -168,6 +164,7 @@
             </div>
         </div>
     </div>
+    </section>
 
     <!-- ===== GALLERY ===== -->
     <section id="gallery" class="gallery-section">

@@ -177,7 +177,212 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== 1. LOCKER ROOM (3D CLOSET) =====
+// ===== 1. REALISTIC CALM FABRIC PHYSICS ENGINE =====
+const ClothEngine = {
+    items: [],
+    imagesCache: {},
+    animId: null,
+    isInitialized: false,
+
+    init() {
+        if (!this.isInitialized) {
+            this.loop = this.loop.bind(this);
+            this.isInitialized = true;
+            this.animId = requestAnimationFrame(this.loop);
+        }
+    },
+
+    addItem(canvas, imgUrl, hangerEl, hookEl) {
+        let img = this.imagesCache[imgUrl];
+        if (!img) {
+            img = new Image();
+            img.src = imgUrl;
+            this.imagesCache[imgUrl] = img;
+        }
+
+        const ctx = canvas.getContext('2d');
+        const instance = {
+            canvas,
+            ctx,
+            img,
+            hangerEl,
+            hookEl,
+            // Calm, weighted fabric physics
+            amp: 0,              // At rest: completely stable
+            targetAmp: 0,        // Decays to 0
+            phase: 0,
+            phaseSpeed: 2.2,     // Natural heavy pendulum speed
+            tilt: 0,             // Hanger angle in degrees
+            tiltVel: 0,          // Angular velocity
+            direction: 1,        // Wave direction (+1 or -1)
+            slices: 55,          // Clean smooth slices
+            wBase: 210,          // Base width
+            hBase: 236,          // Base height
+            canvasW: 280,
+            canvasH: 260,
+            srcX: 160,
+            srcY: 130,
+            srcW: 680,
+            srcH: 765,
+            isLoaded: img.complete && img.naturalWidth > 0,
+            needsDraw: true      // True on init and when moving
+        };
+
+        if (!instance.isLoaded) {
+            img.addEventListener('load', () => {
+                instance.isLoaded = true;
+                instance.needsDraw = true;
+            });
+        }
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = instance.canvasW * dpr;
+        canvas.height = instance.canvasH * dpr;
+        canvas.style.width = `${instance.canvasW}px`;
+        canvas.style.height = `${instance.canvasH}px`;
+        ctx.scale(dpr, dpr);
+
+        this.items.push(instance);
+        return instance;
+    },
+
+    clear() {
+        this.items = [];
+    },
+
+    // Gentle realistic impulse (slightly more fluid sway)
+    triggerImpulse(instance, amp = 9.5, dir = 1) {
+        if (!instance) return;
+        instance.direction = dir;
+        instance.targetAmp = Math.max(instance.targetAmp, amp);
+        instance.tiltVel += dir * (amp * 0.12);
+        instance.needsDraw = true;
+    },
+
+    // Natural wave on arrow click
+    triggerWaveAll(direction = 1, intensity = 13) {
+        this.items.forEach((item, idx) => {
+            setTimeout(() => {
+                this.triggerImpulse(item, intensity, direction);
+            }, idx * 45);
+        });
+    },
+
+    // Moderate scroll physics
+    triggerScroll(delta) {
+        const dir = delta > 0 ? -1 : 1;
+        const speed = Math.min(Math.abs(delta) * 0.38, 16);
+        if (speed < 0.4) return;
+        this.items.forEach((item) => {
+            item.direction = dir;
+            item.targetAmp = Math.max(item.targetAmp, speed);
+            item.tiltVel += dir * (speed * 0.06);
+            item.needsDraw = true;
+        });
+    },
+
+    loop() {
+        const dt = 0.016;
+        const springK = 0.055;
+        const springDamp = 0.915; // Allows ~2-3 graceful, natural oscillations
+
+        for (let i = 0; i < this.items.length; i++) {
+            const item = this.items[i];
+            if (!item.canvas.parentElement) continue;
+
+            // Amplitude decay towards 0 (rest)
+            item.amp += (item.targetAmp - item.amp) * 0.09;
+            item.targetAmp *= 0.95; // Smooth decay allowing a bit more fluid sway
+
+            if (item.amp < 0.04) {
+                item.amp = 0;
+            }
+
+            // Hanger pendulum spring physics
+            const accel = -springK * item.tilt;
+            item.tiltVel = (item.tiltVel + accel) * springDamp;
+            item.tilt += item.tiltVel;
+
+            if (Math.abs(item.tilt) < 0.03 && Math.abs(item.tiltVel) < 0.03) {
+                item.tilt = 0;
+                item.tiltVel = 0;
+            }
+
+            // Advance phase only when there is motion
+            if (item.amp > 0) {
+                item.phase += item.phaseSpeed * dt;
+                item.needsDraw = true;
+            } else if (Math.abs(item.tilt) > 0.04) {
+                item.needsDraw = true;
+            }
+
+            // Sync physical hanger & hook in DOM
+            if (item.hangerEl) {
+                item.hangerEl.style.transform = `rotate(${item.tilt.toFixed(2)}deg)`;
+            }
+            if (item.hookEl) {
+                item.hookEl.style.transform = `translateX(${(item.tilt * 0.32).toFixed(1)}px)`;
+            }
+
+            // If not loaded, or at rest and already drawn, skip redraw to conserve resources
+            if (!item.isLoaded || !item.needsDraw) continue;
+
+            // Viewport culling
+            const rect = item.canvas.getBoundingClientRect();
+            if (rect.right < -80 || rect.left > window.innerWidth + 80) continue;
+
+            const ctx = item.ctx;
+            const w = item.canvasW;
+            const h = item.canvasH;
+            const img = item.img;
+            const slices = item.slices;
+            const wBase = item.wBase;
+            const hBase = item.hBase;
+            const cx = w / 2;
+            const topY = 0;
+
+            const sliceH = hBase / slices;
+            const srcSliceH = item.srcH / slices;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw calm, realistic fabric drape slices with natural fluid sway
+            for (let s = 0; s < slices; s++) {
+                const yNorm = (s + 0.5) / slices; // 0 (collar) to 1 (hem)
+                const pinnedWeight = Math.pow(yNorm, 1.65); // Natural cloth curvature
+
+                // S-curve drape wave with slight secondary inertia lag for authentic cloth feel
+                const wave = (Math.sin(item.phase - yNorm * 1.8) + 0.18 * Math.sin(item.phase * 1.6 - yNorm * 3.2)) 
+                             * item.amp * pinnedWeight * item.direction;
+
+                // Natural hanger pendulum displacement
+                const hangerOffset = Math.tan(item.tilt * Math.PI / 180) * (yNorm * hBase * 0.48);
+
+                const totalDx = (cx - wBase / 2) + wave + hangerOffset;
+                const dy = topY + s * sliceH;
+                const srcSy = item.srcY + s * srcSliceH;
+
+                ctx.drawImage(
+                    img,
+                    item.srcX, srcSy, item.srcW, srcSliceH,
+                    totalDx, dy, wBase, sliceH + 0.8
+                );
+            }
+
+            // When completely settled, stop drawing until next user interaction
+            if (item.amp === 0 && item.tilt === 0) {
+                item.needsDraw = false;
+            }
+        }
+
+        this.animId = requestAnimationFrame(this.loop);
+    }
+};
+
+let lastScrollLeft = 0;
+
 function initLockerRoom() {
+    ClothEngine.init();
     renderJerseyTrack(PLAYERS);
     updateIndicator(activePlayer);
 
@@ -192,22 +397,35 @@ function initLockerRoom() {
             if (filtered.length > 0) {
                 updateIndicator(filtered[0]);
             }
+            ClothEngine.triggerWaveAll(1, 9);
         });
     });
 
-    // Arrow navigation
+    // Arrow navigation with fluid natural cloth waves
     if (railPrev) {
         railPrev.addEventListener('click', () => {
             carouselViewport.scrollBy({ left: -320, behavior: 'smooth' });
+            ClothEngine.triggerWaveAll(1, 13);
         });
     }
     if (railNext) {
         railNext.addEventListener('click', () => {
             carouselViewport.scrollBy({ left: 320, behavior: 'smooth' });
+            ClothEngine.triggerWaveAll(-1, 13);
         });
     }
 
-    // Drag-to-scroll on viewport
+    // Scroll-based cloth physics detection
+    carouselViewport.addEventListener('scroll', () => {
+        const currentScroll = carouselViewport.scrollLeft;
+        const delta = currentScroll - lastScrollLeft;
+        if (Math.abs(delta) > 2) {
+            ClothEngine.triggerScroll(delta);
+        }
+        lastScrollLeft = currentScroll;
+    });
+
+    // Drag-to-scroll on viewport with physics momentum
     let isDown = false;
     let startX, scrollLeft;
     carouselViewport.addEventListener('mousedown', (e) => {
@@ -227,7 +445,9 @@ function initLockerRoom() {
 }
 
 function renderJerseyTrack(players) {
+    ClothEngine.clear();
     carouselTrack.innerHTML = '';
+
     players.forEach((player, idx) => {
         const item = document.createElement('div');
         item.className = 'jersey-item';
@@ -242,6 +462,7 @@ function renderJerseyTrack(players) {
             <div class="jersey-wire"></div>
             <div class="jersey-hanger"></div>
             <div class="jersey-img-container">
+                <canvas class="jersey-cloth-canvas"></canvas>
                 <img src="assets/jerseys/jersey_${player.number}.png" 
                      alt="${player.name} (${player.number})" 
                      class="jersey-hanger-img" 
@@ -253,11 +474,30 @@ function renderJerseyTrack(players) {
             </div>
         `;
 
-        // Hover effect updates indicator
+        const canvas = item.querySelector('.jersey-cloth-canvas');
+        const hanger = item.querySelector('.jersey-hanger');
+        const hook = item.querySelector('.jersey-hook');
+        const clothInst = ClothEngine.addItem(
+            canvas,
+            `assets/jerseys/jersey_${player.number}.png`,
+            hanger,
+            hook
+        );
+        item._clothInst = clothInst;
+
+        // Natural fluid hover sway
         item.addEventListener('mouseenter', () => {
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
+
+            ClothEngine.triggerImpulse(clothInst, 9.5, 1);
+
+            // Subtle gentle reaction on neighboring jerseys
+            const prev = item.previousElementSibling;
+            const next = item.nextElementSibling;
+            if (prev && prev._clothInst) ClothEngine.triggerImpulse(prev._clothInst, 4.5, 1);
+            if (next && next._clothInst) ClothEngine.triggerImpulse(next._clothInst, 4.5, -1);
         });
 
         // Click opens Squad Sheet
@@ -266,6 +506,7 @@ function renderJerseyTrack(players) {
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
+            ClothEngine.triggerImpulse(clothInst, 11, 1);
             openPlayerPanel(player);
         });
 
@@ -396,12 +637,16 @@ function openPlayerPanel(player) {
     }
 
     playerPanelOverlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
+
+    // Scroll the locker-room section into view so overlay is visible
+    const lockerSection = document.getElementById('locker-room');
+    if (lockerSection) {
+        lockerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 function closePlayerPanel() {
     playerPanelOverlay.classList.remove('active');
-    document.body.style.overflow = '';
 }
 
 // ===== 3. GALLERY & LIGHTBOX =====
