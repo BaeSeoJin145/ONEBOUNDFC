@@ -126,12 +126,13 @@ const SCHEDULE = [
 // ===== DOM ELEMENTS =====
 let carouselTrack, carouselViewport, posTabs, railPrev, railNext;
 let indicatorNumber, indicatorName, indicatorPos;
+let playerIndicator;
 let playerPanelOverlay, playerPanel, panelClose, panelBackBtn;
 let panelJerseyWrapper, panelJerseyBackImg, panelFlipBtn;
 let galleryGrid, galleryTabs, lightbox, lightboxImg, lightboxCaption, lightboxClose, lightboxPrev, lightboxNext;
 let currentLightboxIndex = 0;
 let currentFilteredGallery = GALLERY_DATA;
-let activePlayer = PLAYERS[9]; // default: #66 SEOJIN
+let activePlayer = PLAYERS[0]; // default: #3 YEONJE (first in rack)
 
 // ===== DOM LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -145,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     indicatorNumber = document.getElementById('indicator-number');
     indicatorName = document.getElementById('indicator-name');
     indicatorPos = document.getElementById('indicator-pos');
+    playerIndicator = document.getElementById('player-indicator');
 
     playerPanelOverlay = document.getElementById('player-panel-overlay');
     playerPanel = document.getElementById('player-panel');
@@ -251,8 +253,12 @@ const ClothEngine = {
     },
 
     // Gentle scroll impulse (when closet rail is dragged or scrolled)
+    // Physical law: When moving viewport right (delta > 0), items move LEFT on screen;
+    // by inertia & air resistance, the hem swings to the RIGHT (+1).
+    // When moving viewport left (delta < 0), items move RIGHT on screen;
+    // by inertia, the hem swings to the LEFT (-1).
     triggerScroll(delta) {
-        const dir = delta > 0 ? -1 : 1;
+        const dir = delta > 0 ? 1 : -1;
         const impulse = Math.min(Math.abs(delta) * 1.5, 55.0) * dir;
         if (Math.abs(impulse) < 2.0) return;
         this.items.forEach((item) => {
@@ -262,10 +268,13 @@ const ClothEngine = {
     },
 
     // Arrow navigation impulse
+    // direction > 0: advancing forward (items shift left -> hem swings right +1)
+    // direction < 0: moving back (items shift right -> hem swings left -1)
     triggerWaveAll(direction = 1, impulse = 45.0) {
+        const factor = direction > 0 ? 1 : -1;
         this.items.forEach((item, idx) => {
             setTimeout(() => {
-                this.triggerImpulse(item, direction * impulse);
+                this.triggerImpulse(item, factor * impulse);
             }, idx * 40);
         });
     },
@@ -347,11 +356,24 @@ const ClothEngine = {
 };
 
 let lastScrollLeft = 0;
+let isTouchSwiping = false;
+let touchSwipeTimeout = null;
 
 function initLockerRoom() {
     ClothEngine.init();
     renderJerseyTrack(PLAYERS);
     updateIndicator(activePlayer);
+
+    // Make indicator card tappable to open Squad Sheet (especially great on mobile!)
+    if (playerIndicator) {
+        playerIndicator.style.cursor = 'pointer';
+        playerIndicator.setAttribute('title', '클릭하여 스쿼드 시트 열기');
+        playerIndicator.addEventListener('click', () => {
+            if (activePlayer) {
+                openPlayerPanel(activePlayer);
+            }
+        });
+    }
 
     // Position filter tabs
     posTabs.forEach(tab => {
@@ -364,25 +386,40 @@ function initLockerRoom() {
             if (filtered.length > 0) {
                 updateIndicator(filtered[0]);
             }
+            // Gentle arrival wave
             ClothEngine.triggerWaveAll(1, 35.0);
         });
     });
 
-    // Arrow navigation with fluid natural cloth waves
+    // Precise Arrow navigation
+    function scrollCarouselByStep(dir) {
+        const items = Array.from(carouselTrack.querySelectorAll('.jersey-item'));
+        if (items.length === 0) return;
+
+        const activeIdx = items.findIndex(el => el.classList.contains('active'));
+        let targetIdx = activeIdx >= 0 ? activeIdx + dir : (dir > 0 ? 1 : 0);
+        targetIdx = Math.max(0, Math.min(items.length - 1, targetIdx));
+
+        const targetItem = items[targetIdx];
+        if (targetItem) {
+            targetItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            ClothEngine.triggerWaveAll(dir, 42.0);
+        }
+    }
+
     if (railPrev) {
         railPrev.addEventListener('click', () => {
-            carouselViewport.scrollBy({ left: -320, behavior: 'smooth' });
-            ClothEngine.triggerWaveAll(1, 45.0);
+            scrollCarouselByStep(-1);
         });
     }
     if (railNext) {
         railNext.addEventListener('click', () => {
-            carouselViewport.scrollBy({ left: 320, behavior: 'smooth' });
-            ClothEngine.triggerWaveAll(-1, 45.0);
+            scrollCarouselByStep(1);
         });
     }
 
-    // Scroll-based cloth physics detection
+    // Real-time scroll center detection & cloth physics
+    let scrollDebounceTimer = null;
     carouselViewport.addEventListener('scroll', () => {
         const currentScroll = carouselViewport.scrollLeft;
         const delta = currentScroll - lastScrollLeft;
@@ -390,9 +427,73 @@ function initLockerRoom() {
             ClothEngine.triggerScroll(delta);
         }
         lastScrollLeft = currentScroll;
-    });
 
-    // Drag-to-scroll on viewport with physics momentum
+        // Auto-detect centered jersey as user scrolls
+        clearTimeout(scrollDebounceTimer);
+        scrollDebounceTimer = setTimeout(() => {
+            updateCenteredJersey();
+        }, 60);
+    }, { passive: true });
+
+    function updateCenteredJersey() {
+        const viewportRect = carouselViewport.getBoundingClientRect();
+        const centerX = viewportRect.left + viewportRect.width / 2;
+        const items = carouselTrack.querySelectorAll('.jersey-item');
+        let closestItem = null;
+        let closestDist = Infinity;
+
+        items.forEach(item => {
+            const rect = item.getBoundingClientRect();
+            const itemCenter = rect.left + rect.width / 2;
+            const dist = Math.abs(itemCenter - centerX);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestItem = item;
+            }
+        });
+
+        if (closestItem && !closestItem.classList.contains('active')) {
+            items.forEach(el => el.classList.remove('active'));
+            closestItem.classList.add('active');
+            const num = parseInt(closestItem.dataset.number, 10);
+            const player = PLAYERS.find(p => p.number === num);
+            if (player) {
+                activePlayer = player;
+                updateIndicator(player);
+            }
+        }
+    }
+
+    // Touch swipe handling to avoid accidental modal clicks on mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    carouselViewport.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+            const diffY = Math.abs(e.touches[0].clientY - touchStartY);
+            if (diffX > 10 && diffX > diffY) {
+                isTouchSwiping = true;
+            }
+        }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchend', () => {
+        if (isTouchSwiping) {
+            clearTimeout(touchSwipeTimeout);
+            touchSwipeTimeout = setTimeout(() => {
+                isTouchSwiping = false;
+            }, 180);
+        }
+    }, { passive: true });
+
+    // Drag-to-scroll on desktop viewport with momentum
     let isDown = false;
     let startX, scrollLeft;
     carouselViewport.addEventListener('mousedown', (e) => {
@@ -448,28 +549,34 @@ function renderJerseyTrack(players) {
         );
         item._clothInst = clothInst;
 
-        // ONLY the hovered jersey sways naturally! Zero neighbor trembling!
+        // ONLY the hovered jersey sways naturally! Physical direction according to movement
         item.addEventListener('mouseenter', (e) => {
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
 
-            // Natural impulse direction based on cursor movement/side
-            const rect = item.getBoundingClientRect();
-            const fromLeft = e.clientX < (rect.left + rect.width / 2);
-            const impulseDir = fromLeft ? 1 : -1;
+            // Natural impulse direction:
+            // Cursor moving to the right pushes cloth to the right (+1)
+            // Cursor moving to the left pushes cloth to the left (-1)
+            let impulseDir = 1;
+            if (typeof e.movementX === 'number' && e.movementX !== 0) {
+                impulseDir = e.movementX > 0 ? 1 : -1;
+            } else {
+                const rect = item.getBoundingClientRect();
+                impulseDir = e.clientX < (rect.left + rect.width / 2) ? 1 : -1;
+            }
 
-            // Smooth natural fabric touch impulse
             ClothEngine.triggerImpulse(clothInst, impulseDir * 58.0);
         });
 
-        // Click opens Squad Sheet
+        // Click opens Squad Sheet (safely ignored if user was swiping on mobile)
         item.addEventListener('click', () => {
+            if (isTouchSwiping) return;
             activePlayer = player;
             document.querySelectorAll('.jersey-item').forEach(el => el.classList.remove('active'));
             item.classList.add('active');
             updateIndicator(player);
-            ClothEngine.triggerImpulse(clothInst, 65.0);
+            ClothEngine.triggerImpulse(clothInst, 55.0);
             openPlayerPanel(player);
         });
 
@@ -517,6 +624,8 @@ function initPlayerPanel() {
     let currentRotation = 0;
     let targetRotation = 0;
 
+    if (!panelJerseyWrapper) return;
+
     panelJerseyWrapper.addEventListener('click', (e) => {
         // Simple click toggles flip
         if (!isDragging) {
@@ -537,6 +646,23 @@ function initPlayerPanel() {
 
     window.addEventListener('mouseup', () => {
         setTimeout(() => { isDragging = false; startX = 0; }, 50);
+    });
+
+    // Touch support for 3D jersey flip on mobile
+    let touchJerseyStartX = 0;
+    panelJerseyWrapper.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchJerseyStartX = e.touches[0].clientX;
+        }
+    }, { passive: true });
+
+    panelJerseyWrapper.addEventListener('touchend', (e) => {
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            const diffX = e.changedTouches[0].clientX - touchJerseyStartX;
+            if (Math.abs(diffX) > 30) {
+                toggleJerseyFlip();
+            }
+        }
     });
 }
 
@@ -775,6 +901,14 @@ function initMobileNav() {
             btn.classList.remove('active');
             nav.classList.remove('open');
         });
+    });
+
+    // Close when tapping outside the mobile menu
+    document.addEventListener('click', (e) => {
+        if (nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
+            btn.classList.remove('active');
+            nav.classList.remove('open');
+        }
     });
 }
 
