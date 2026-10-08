@@ -994,23 +994,7 @@ ul {
     border-color: var(--gold);
 }
 
-/* Instruction Text */
-.locker-instruction {
-    position: relative;
-    z-index: 10;
-    text-align: center;
-    padding: 10px 20px 28px;
-}
 
-.locker-instruction span {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    letter-spacing: 1.2px;
-}
-
-.instruction-mobile {
-    display: none;
-}
 
 /* ================================================
    PLAYER DETAIL PANEL (SQUAD SHEET)
@@ -2341,14 +2325,6 @@ ul {
     .indicator-tap-badge {
         padding: 4px 10px;
         font-size: 0.68rem;
-    }
-
-    .instruction-desktop {
-        display: none !important;
-    }
-
-    .instruction-mobile {
-        display: inline !important;
     }
 
     .locker-instruction {
